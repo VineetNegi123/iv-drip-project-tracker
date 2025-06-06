@@ -8,37 +8,48 @@ def load_data():
     if not os.path.exists("data"):
         os.makedirs("data")
 
-    task_file = "data/tasks.csv"
-    milestone_file = "data/milestones.csv"
+    files = {
+        "tasks": "data/tasks.csv",
+        "milestones": "data/milestones.csv",
+        "stages": "data/stages.csv"
+    }
 
-    if not os.path.exists(task_file):
-        tasks = pd.DataFrame(columns=["Task", "Owner", "Status", "Deadline"])
-        tasks.to_csv(task_file, index=False)
-    else:
-        tasks = pd.read_csv(task_file)
+    for file in files.values():
+        if not os.path.exists(file):
+            if "tasks" in file:
+                pd.DataFrame(columns=["Task", "Owner", "Status", "Deadline"]).to_csv(file, index=False)
+            elif "milestones" in file:
+                pd.DataFrame(columns=["Milestone", "Date", "Status"]).to_csv(file, index=False)
+            elif "stages" in file:
+                pd.DataFrame(columns=["Stage", "Status", "Notes"]).to_csv(file, index=False)
 
-    if not os.path.exists(milestone_file):
-        milestones = pd.DataFrame(columns=["Milestone", "Date", "Status"])
-        milestones.to_csv(milestone_file, index=False)
-    else:
-        milestones = pd.read_csv(milestone_file)
-
-    return tasks, milestones
+    return (
+        pd.read_csv(files["tasks"]),
+        pd.read_csv(files["milestones"]),
+        pd.read_csv(files["stages"])
+    )
 
 # --- Save Data ---
-def save_data(tasks, milestones):
+def save_data(tasks, milestones, stages):
     tasks.to_csv("data/tasks.csv", index=False)
     milestones.to_csv("data/milestones.csv", index=False)
+    stages.to_csv("data/stages.csv", index=False)
 
 # --- App Setup ---
 st.set_page_config(page_title="IV Drip Project Tracker", layout="wide")
 st.title("💧 IV Drip Project Tracker")
 
 st.sidebar.header("🚀 Project Navigation")
-page = st.sidebar.radio("Select Section", ["📊 Dashboard", "🗂️ Task Board", "📅 Milestones", "📎 Upload Files"])
+page = st.sidebar.radio("Select Section", [
+    "📊 Dashboard", 
+    "🗂️ Task Board", 
+    "📅 Milestones", 
+    "🔧 Project Stages",
+    "📷 Product Media", 
+    "📎 Upload Files"])
 
 # Load data
-tasks, milestones = load_data()
+tasks, milestones, stages = load_data()
 
 # --- Dashboard ---
 if page == "📊 Dashboard":
@@ -47,31 +58,27 @@ if page == "📊 Dashboard":
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Tasks", len(tasks))
     col2.metric("Completed Tasks", (tasks['Status'] == 'Done').sum())
-    col3.metric("Upcoming Milestones", (pd.to_datetime(milestones['Date']) > datetime.today()).sum())
+    col3.metric("Milestones Done", (milestones['Status'] == '✅ Done').sum())
 
-    completed_ratio = round((tasks['Status'] == 'Done').sum() / len(tasks) * 100, 1) if len(tasks) > 0 else 0
-    st.progress(completed_ratio / 100)
-    st.write(f"✅ **{completed_ratio}%** of tasks completed")
+    progress = (tasks['Status'] == 'Done').sum() / len(tasks) if len(tasks) > 0 else 0
+    st.progress(progress)
+    st.write(f"🔧 Progress: **{round(progress * 100, 1)}%**")
 
     st.markdown("---")
-    st.markdown("### 🔔 Milestones")
-    for _, row in milestones.iterrows():
-        st.info(f"**{row['Milestone']}** — {row['Date']} — {row['Status']}")
+    st.markdown("### 📋 Stage Completion")
+    for _, row in stages.iterrows():
+        st.info(f"🧩 **{row['Stage']}** — {row['Status']} — {row['Notes']}")
 
 # --- Task Board ---
 elif page == "🗂️ Task Board":
-    st.subheader("✅ Project Task Tracker")
-
+    st.subheader("✅ Team Tasks")
     status_filter = st.selectbox("Filter by Status", ["All"] + tasks['Status'].unique().tolist())
-    if status_filter != "All":
-        filtered_tasks = tasks[tasks['Status'] == status_filter]
-    else:
-        filtered_tasks = tasks
+    view = tasks if status_filter == "All" else tasks[tasks['Status'] == status_filter]
 
-    for idx, row in filtered_tasks.iterrows():
+    for _, row in view.iterrows():
         with st.expander(f"📝 {row['Task']} — {row['Status']}"):
-            st.write(f"👤 **Owner**: {row['Owner']}")
-            st.write(f"📅 **Deadline**: {row['Deadline']}")
+            st.write(f"👤 Owner: {row['Owner']}")
+            st.write(f"📅 Deadline: {row['Deadline']}")
 
     st.markdown("---")
     st.markdown("### ➕ Add New Task")
@@ -84,35 +91,63 @@ elif page == "🗂️ Task Board":
         if submit:
             new = pd.DataFrame([[task, owner, status, deadline]], columns=tasks.columns)
             tasks = pd.concat([tasks, new], ignore_index=True)
-            save_data(tasks, milestones)
-            st.success("✅ Task added successfully!")
+            save_data(tasks, milestones, stages)
+            st.success("Task added!")
 
-# --- Milestone Timeline ---
+# --- Milestones ---
 elif page == "📅 Milestones":
-    st.subheader("📅 Milestone Timeline")
+    st.subheader("🎯 Milestone Tracker")
+    for _, row in milestones.iterrows():
+        st.success(f"📌 {row['Milestone']} — {row['Date']} — {row['Status']}")
 
-    for idx, row in milestones.iterrows():
-        st.success(f"🎯 **{row['Milestone']}** — {row['Date']} — {row['Status']}")
-
-    st.markdown("---")
-    st.markdown("### ➕ Add New Milestone")
+    st.markdown("### ➕ Add Milestone")
     with st.form("new_milestone"):
-        milestone = st.text_input("Milestone")
-        date = st.date_input("Target Date")
-        status = st.selectbox("Status", ["✅ Done", "🟡 In Progress", "⏳ Upcoming"])
+        m = st.text_input("Milestone")
+        d = st.date_input("Date")
+        s = st.selectbox("Status", ["✅ Done", "🟡 In Progress", "⏳ Upcoming"])
         submit = st.form_submit_button("Add Milestone")
         if submit:
-            new = pd.DataFrame([[milestone, date, status]], columns=milestones.columns)
+            new = pd.DataFrame([[m, d, s]], columns=milestones.columns)
             milestones = pd.concat([milestones, new], ignore_index=True)
-            save_data(tasks, milestones)
-            st.success("📌 Milestone added!")
+            save_data(tasks, milestones, stages)
+            st.success("Milestone added!")
 
-# --- Upload Files ---
-elif page == "📎 Upload Files":
-    st.subheader("📎 Upload Design Files or Notes")
-    uploaded_file = st.file_uploader("Upload your file (PDF, image, doc, etc.)")
-    if uploaded_file:
-        file_path = os.path.join("data", uploaded_file.name)
+# --- Stages ---
+elif page == "🔧 Project Stages":
+    st.subheader("🛠️ Project Lifecycle Stages")
+    for _, row in stages.iterrows():
+        with st.expander(f"🧩 {row['Stage']} — {row['Status']}"):
+            st.write(row['Notes'])
+
+    st.markdown("### ➕ Add/Update Stage")
+    with st.form("new_stage"):
+        stage = st.text_input("Stage")
+        status = st.selectbox("Status", ["Not Started", "In Progress", "Completed"])
+        notes = st.text_area("Notes (e.g. CAD plan, SolidWorks, code plan, etc.)")
+        submit = st.form_submit_button("Add / Update")
+        if submit:
+            stages = stages[stages.Stage != stage]
+            stages = pd.concat([stages, pd.DataFrame([[stage, status, notes]], columns=stages.columns)], ignore_index=True)
+            save_data(tasks, milestones, stages)
+            st.success("Stage saved!")
+
+# --- Media ---
+elif page == "📷 Product Media":
+    st.subheader("📸 Upload Product Images")
+    uploaded = st.file_uploader("Upload product photo or CAD render", type=["jpg", "jpeg", "png", "pdf"])
+    if uploaded:
+        file_path = os.path.join("data", uploaded.name)
         with open(file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        st.success(f"✅ Uploaded {uploaded_file.name}")
+            f.write(uploaded.getbuffer())
+        st.image(file_path, caption=uploaded.name)
+        st.success("Media uploaded!")
+
+# --- General Upload ---
+elif page == "📎 Upload Files":
+    st.subheader("📎 Upload Design Docs / Plans / Budget")
+    uploaded = st.file_uploader("Upload file", type=["jpg", "jpeg", "png", "pdf", "docx", "xlsx"])
+    if uploaded:
+        file_path = os.path.join("data", uploaded.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded.getbuffer())
+        st.success(f"Uploaded {uploaded.name}")
