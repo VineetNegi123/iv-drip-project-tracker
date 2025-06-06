@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import base64
+from io import BytesIO
+from fpdf import FPDF
 
 # Set page config
 st.set_page_config(page_title="CO₂ Reduction Calculator", layout="wide")
@@ -139,7 +141,7 @@ with chart_col:
 
 # PDF Export Section
 st.markdown("---")
-st.subheader("🧾 Export Proposal Summary")
+st.subheader("🧒 Export Proposal Summary")
 
 report_content = f'''
 CO₂ Reduction Proposal Summary
@@ -153,9 +155,6 @@ Software Fee: ${software_fee:,.0f}/year
 Net Income (3yrs): ${three_year_net_income:,}k
 Payback Period: {int(payback_months)} months
 '''
-
-from io import BytesIO
-from fpdf import FPDF
 
 class PDF(FPDF):
     def header(self):
@@ -178,7 +177,7 @@ pdf_buffer = BytesIO()
 pdf.output(pdf_buffer)
 
 st.download_button(
-    label="📅 Download Summary Report (PDF)",
+    label="🗓️ Download Summary Report (PDF)",
     data=pdf_buffer.getvalue(),
     file_name="CO2_Proposal_Summary.pdf",
     mime="application/pdf"
@@ -188,7 +187,7 @@ st.download_button(
 st.markdown("""
     <br>
     <button onclick="window.print()" style="padding:10px 20px; font-size:16px; background:#1f77b4; color:white; border:none; border-radius:6px; cursor:pointer;">
-        🖨️ Print / Save Full Page as PDF
+        🗸️ Print / Save Full Page as PDF
     </button>
     <p style='font-size:13px; margin-top:10px;'>Use this button to export the entire dashboard view including charts and inputs.</p>
 """, unsafe_allow_html=True)
@@ -202,3 +201,4 @@ Notes:
 """)
 
 st.caption("Crafted by Univers AI • Powered by Streamlit • Engineered for client impact.")
+
