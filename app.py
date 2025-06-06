@@ -1,175 +1,164 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-import os
+import plotly.graph_objects as go
+import base64
+from PIL import Image
 
-# --- Load Data ---
-def load_data():
-    if not os.path.exists("data"):
-        os.makedirs("data")
+# Set page config
+st.set_page_config(page_title="CO₂ Reduction Calculator", layout="wide")
 
-    files = {
-        "tasks": "data/tasks.csv",
-        "milestones": "data/milestones.csv",
-        "stages": "data/stages.csv"
+# Custom CSS for clean layout
+st.markdown("""
+    <style>
+    .stApp {
+        max-width: 1300px;
+        margin: 0 auto;
     }
+    .metric-box {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 14px;
+        text-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        font-size: 28px;
+        font-weight: bold;
+        border: 1px solid #e5e7eb;
+    }
+    .metric-label {
+        font-size: 15px;
+        color: #444;
+        margin-top: 6px;
+    }
+    h1, h2, h3, h4 {
+        font-weight: 700;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-    for file in files.values():
-        if not os.path.exists(file):
-            if "tasks" in file:
-                pd.DataFrame(columns=["Task", "Owner", "Status", "Deadline"]).to_csv(file, index=False)
-            elif "milestones" in file:
-                pd.DataFrame(columns=["Milestone", "Date", "Status"]).to_csv(file, index=False)
-            elif "stages" in file:
-                pd.DataFrame(columns=["Stage", "Status", "Notes"]).to_csv(file, index=False)
+# Load and display logo
+logo = "univers_logo.png"  # Ensure this logo file is in the same directory or replace with your path
+st.image(logo, width=150)
 
-    return (
-        pd.read_csv(files["tasks"]),
-        pd.read_csv(files["milestones"]),
-        pd.read_csv(files["stages"])
-    )
+st.title("📊 CO₂ Reduction & ROI Dashboard")
 
-# --- Save Data ---
-def save_data(tasks, milestones, stages):
-    tasks.to_csv("data/tasks.csv", index=False)
-    milestones.to_csv("data/milestones.csv", index=False)
-    stages.to_csv("data/stages.csv", index=False)
+# Carbon emission factors by country (kg CO₂/kWh)
+country_factors = {
+    "Indonesia": 0.87,
+    "Singapore": 0.408,
+    "Malaysia": 0.585,
+    "Thailand": 0.513,
+    "Vietnam": 0.618,
+    "Philippines": 0.65,
+    "China": 0.555,
+    "Japan": 0.474,
+    "South Korea": 0.405,
+    "India": 0.82,
+    "Australia": 0.79,
+    "United States": 0.42,
+    "United Kingdom": 0.233,
+    "Germany": 0.338,
+    "Custom": None
+}
 
-# --- App Setup ---
-st.set_page_config(page_title="IV Drip Project Tracker", layout="wide")
+# Input Section
+st.header("🔧 Input Parameters")
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    energy_savings = st.number_input("Estimated Energy Savings (kWh/year)", value=1040249.0)
+
+with col2:
+    selected_country = st.selectbox("Select Country", list(country_factors.keys()))
+    if selected_country == "Custom":
+        carbon_emission_factor = st.number_input("Custom Carbon Emission Factor (kg CO₂/kWh)", value=0.82)
+    else:
+        carbon_emission_factor = country_factors[selected_country]
+        st.info(f"Using carbon factor for {selected_country}: {carbon_emission_factor} kg CO₂/kWh")
+
+with col3:
+    electricity_rate = st.number_input("Electricity Rate ($/kWh)", value=0.14)
+    savings_percentage = st.number_input("Savings Percentage", value=8.8, format="%.2f") / 100
+
+# Derived Calculations
+total_energy_before = energy_savings / savings_percentage if savings_percentage > 0 else 0
+energy_after = total_energy_before - energy_savings
+electricity_cost_before = total_energy_before * electricity_rate
+electricity_cost_after = energy_after * electricity_rate
+annual_co2_reduction = energy_savings * carbon_emission_factor
+
+# ROI Calculations
+initial_investment = st.number_input("Initial Investment ($)", value=16000.0)
+software_fee = st.number_input("Annual Software Fee ($)", value=72817.0)
+years = 10
+annual_savings = energy_savings * electricity_rate
+cumulative_savings = []
+net_cash_flow = []
+total_costs = [initial_investment + software_fee] + [software_fee] * (years - 1)
+
+for i in range(years):
+    net = annual_savings - total_costs[i]
+    net_cash_flow.append(net if i == 0 else net_cash_flow[-1] + net)
+    cumulative_savings.append(net_cash_flow[-1])
+
+three_year_net_income = round(cumulative_savings[2] / 1000)
+payback_months = 0
+for i in range(years):
+    if cumulative_savings[i] >= 0:
+        payback_months = round((i + 1) * 12 * ((total_costs[i] - annual_savings) / annual_savings), 0)
+        break
+
+# Metrics Display
+st.markdown("### 📈 Overview")
+metrics_col, chart_col = st.columns([1, 3])
+
+with metrics_col:
+    st.markdown(f"""
+    <div class=\"metric-box\">{annual_co2_reduction / 1000:.1f}<div class=\"metric-label\">tCO₂e/year<br>Carbon Reduction</div></div>
+    <br>
+    <div class=\"metric-box\">{energy_savings / 1000:,.0f}k<div class=\"metric-label\">kWh/year<br>Energy Reduction</div></div>
+    <br>
+    <div class=\"metric-box\">{savings_percentage * 100:.1f}%<div class=\"metric-label\">Saving Percentage</div></div>
+    <br>
+    <div class=\"metric-box\">{int(payback_months):02d}<div class=\"metric-label\">Months<br>Payback Period</div></div>
+    <br>
+    <div class=\"metric-box\">{three_year_net_income}k<div class=\"metric-label\">US Dollars<br>Net Income (3yrs)</div></div>
+    """, unsafe_allow_html=True)
+
+with chart_col:
+    st.subheader("📉 Annual Saving (2025)")
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=["2025"], y=[energy_savings], name='Annual Energy Reduction (kWh)',
+                         marker_color='#3B82F6', text=[f"{int(energy_savings / 1000)}k"], textposition="outside"))
+    fig.update_layout(height=420, xaxis=dict(showgrid=False), yaxis=dict(showgrid=True),
+                      margin=dict(l=20, r=20, t=30, b=30), showlegend=False, plot_bgcolor='white')
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("💰 10-Year ROI Forecast")
+    fig2 = go.Figure()
+    fig2.add_trace(go.Bar(x=list(range(years)), y=[annual_savings]*years, name="Annual Savings", marker_color="#10B981"))
+    fig2.add_trace(go.Bar(x=list(range(years)), y=total_costs, name="Annual Costs", marker_color="#F87171"))
+    fig2.add_trace(go.Scatter(x=list(range(years)), y=cumulative_savings, mode='lines+markers', name="Cumulative Net Savings", line=dict(color="#3B82F6")))
+    fig2.update_layout(barmode='group', height=400, xaxis_title='Year', yaxis_title='Cash Flow ($)',
+                       plot_bgcolor='white', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
+    st.plotly_chart(fig2, use_container_width=True)
+
+# PDF Export Section
+st.markdown("---")
+st.subheader("🧾 Export Proposal Summary")
+
 st.markdown("""
-<style>
-body {
-    background-color: #ffffff;
-}
-section.main > div {
-    padding: 20px;
-}
-.block-container {
-    padding-top: 1rem;
-}
-</style>
+    <br>
+    <button onclick="window.print()" style="padding:10px 20px; font-size:16px; background:#1f77b4; color:white; border:none; border-radius:6px; cursor:pointer;">
+        🖨️ Print / Save Full Page as PDF
+    </button>
+    <p style='font-size:13px; margin-top:10px;'>Click this to export all graphs, inputs, and results as a printable PDF report.</p>
 """, unsafe_allow_html=True)
 
 st.markdown("""
-<div style='text-align:center; padding: 20px; border-bottom: 2px solid #ccc;'>
-    <h1 style='color:#003366;'>💧 IV Drip Startup Dashboard</h1>
-    <p style='font-size:18px;'>Track your innovation from design to deployment</p>
-</div>
-""", unsafe_allow_html=True)
+**Notes:**
+- Chart shows only total for 2025 without monthly breakdown.
+- ROI forecast reflects adjustable investment + fee vs. energy cost savings.
+- The button above uses your browser to export the full visible layout as PDF.
+""")
 
-st.sidebar.header("🚀 Project Navigation")
-page = st.sidebar.radio("Select Section", [
-    "📊 Dashboard", 
-    "🗂️ Task Board", 
-    "📅 Milestones", 
-    "🔧 Project Stages",
-    "📷 Product Media", 
-    "📎 Upload Files"])
-
-# Load data
-tasks, milestones, stages = load_data()
-
-# --- Dashboard ---
-if page == "📊 Dashboard":
-    st.markdown("<h2 style='color:#003366;'>📈 Project Overview</h2>", unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Tasks", len(tasks))
-    col2.metric("Completed Tasks", (tasks['Status'] == 'Done').sum())
-    col3.metric("Milestones Done", (milestones['Status'] == '✅ Done').sum())
-
-    progress = (tasks['Status'] == 'Done').sum() / len(tasks) if len(tasks) > 0 else 0
-    st.progress(progress)
-    st.write(f"🔧 Progress: **{round(progress * 100, 1)}%**")
-
-    st.markdown("<h3 style='color:#003366;'>📋 Stage Completion</h3>", unsafe_allow_html=True)
-    for _, row in stages.iterrows():
-        st.markdown(f"""
-            <div style='padding:10px; margin:10px 0; border-left:5px solid #003366; background:#f9f9f9;'>
-                <b>🧩 {row['Stage']}</b> — {row['Status']}<br>
-                <span style='font-size:14px;'>{row['Notes']}</span>
-            </div>
-        """, unsafe_allow_html=True)
-
-# --- Task Board ---
-elif page == "🗂️ Task Board":
-    st.markdown("<h2 style='color:#003366;'>✅ Team Tasks</h2>", unsafe_allow_html=True)
-    status_filter = st.selectbox("Filter by Status", ["All"] + tasks['Status'].unique().tolist())
-    view = tasks if status_filter == "All" else tasks[tasks['Status'] == status_filter]
-
-    for _, row in view.iterrows():
-        with st.expander(f"📝 {row['Task']} — {row['Status']}"):
-            st.write(f"👤 Owner: {row['Owner']}")
-            st.write(f"📅 Deadline: {row['Deadline']}")
-
-    st.markdown("### ➕ Add New Task")
-    with st.form("new_task"):
-        task = st.text_input("Task")
-        owner = st.text_input("Owner")
-        status = st.selectbox("Status", ["To Do", "In Progress", "Done"])
-        deadline = st.date_input("Deadline")
-        submit = st.form_submit_button("Add Task")
-        if submit:
-            new = pd.DataFrame([[task, owner, status, deadline]], columns=tasks.columns)
-            tasks = pd.concat([tasks, new], ignore_index=True)
-            save_data(tasks, milestones, stages)
-            st.success("✅ Task added successfully!")
-
-# --- Milestones ---
-elif page == "📅 Milestones":
-    st.markdown("<h2 style='color:#003366;'>🎯 Milestone Tracker</h2>", unsafe_allow_html=True)
-    for _, row in milestones.iterrows():
-        st.markdown(f"<div style='padding:10px; background:#eef5ff; border-left: 5px solid #3366cc;'>📌 <b>{row['Milestone']}</b> — {row['Date']} — {row['Status']}</div>", unsafe_allow_html=True)
-
-    st.markdown("### ➕ Add Milestone")
-    with st.form("new_milestone"):
-        m = st.text_input("Milestone")
-        d = st.date_input("Date")
-        s = st.selectbox("Status", ["✅ Done", "🟡 In Progress", "⏳ Upcoming"])
-        submit = st.form_submit_button("Add Milestone")
-        if submit:
-            new = pd.DataFrame([[m, d, s]], columns=milestones.columns)
-            milestones = pd.concat([milestones, new], ignore_index=True)
-            save_data(tasks, milestones, stages)
-            st.success("📌 Milestone added!")
-
-# --- Stages ---
-elif page == "🔧 Project Stages":
-    st.markdown("<h2 style='color:#003366;'>🛠️ Project Lifecycle Stages</h2>", unsafe_allow_html=True)
-    for _, row in stages.iterrows():
-        with st.expander(f"🧩 {row['Stage']} — {row['Status']}"):
-            st.write(row['Notes'])
-
-    st.markdown("### ➕ Add or Update Stage")
-    with st.form("new_stage"):
-        stage = st.text_input("Stage")
-        status = st.selectbox("Status", ["Not Started", "In Progress", "Completed"])
-        notes = st.text_area("Notes (e.g. CAD plan, SolidWorks, code plan, etc.)")
-        submit = st.form_submit_button("Save")
-        if submit:
-            stages = stages[stages.Stage != stage]
-            stages = pd.concat([stages, pd.DataFrame([[stage, status, notes]], columns=stages.columns)], ignore_index=True)
-            save_data(tasks, milestones, stages)
-            st.success("Stage saved!")
-
-# --- Media ---
-elif page == "📷 Product Media":
-    st.markdown("<h2 style='color:#003366;'>📸 Product Media</h2>", unsafe_allow_html=True)
-    uploaded = st.file_uploader("Upload product photo or CAD render", type=["jpg", "jpeg", "png", "pdf"])
-    if uploaded:
-        file_path = os.path.join("data", uploaded.name)
-        with open(file_path, "wb") as f:
-            f.write(uploaded.getbuffer())
-        st.image(file_path, caption=uploaded.name)
-        st.success("Media uploaded!")
-
-# --- Upload Files ---
-elif page == "📎 Upload Files":
-    st.markdown("<h2 style='color:#003366;'>📎 General Upload Zone</h2>", unsafe_allow_html=True)
-    uploaded = st.file_uploader("Upload design docs, budget sheets, etc.", type=["jpg", "jpeg", "png", "pdf", "docx", "xlsx"])
-    if uploaded:
-        file_path = os.path.join("data", uploaded.name)
-        with open(file_path, "wb") as f:
-            f.write(uploaded.getbuffer())
-        st.success(f"✅ Uploaded {uploaded.name}")
+st.caption("Crafted by Univers AI • Powered by Streamlit • Engineered for client impact.")
