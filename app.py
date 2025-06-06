@@ -121,8 +121,7 @@ with metrics_col:
 
 with chart_col:
     st.subheader("📉 Annual Saving (2025)")
-    fig = go.
-Figure()
+    fig = go.Figure()
     fig.add_trace(go.Bar(x=["2025"], y=[energy_savings], name='Annual Energy Reduction (kWh)',
                          marker_color='#3B82F6', text=[f"{int(energy_savings / 1000)}k"], textposition="outside"))
     fig.update_layout(height=420, xaxis=dict(showgrid=False), yaxis=dict(showgrid=True),
@@ -155,14 +154,37 @@ Net Income (3yrs): ${three_year_net_income:,}k
 Payback Period: {int(payback_months)} months
 '''
 
+from io import BytesIO
+from fpdf import FPDF
+
+class PDF(FPDF):
+    def header(self):
+        self.set_font("Arial", 'B', 14)
+        self.cell(0, 10, "Univers CO₂ Reduction Summary", ln=True, align='C')
+        self.ln(10)
+
+    def chapter_body(self, text):
+        self.set_font("Arial", '', 12)
+        self.multi_cell(0, 10, text)
+        self.ln()
+
+    def create_pdf(self, content):
+        self.add_page()
+        self.chapter_body(content)
+
+pdf = PDF()
+pdf.create_pdf(report_content)
+pdf_buffer = BytesIO()
+pdf.output(pdf_buffer)
+
 st.download_button(
-    label="📥 Download Summary Report (TXT)",
-    data=report_content,
-    file_name="CO2_Proposal_Summary.txt",
-    mime="text/plain"
+    label="📅 Download Summary Report (PDF)",
+    data=pdf_buffer.getvalue(),
+    file_name="CO2_Proposal_Summary.pdf",
+    mime="application/pdf"
 )
 
-# Print to PDF button (browser triggered)
+# Browser Print Option
 st.markdown("""
     <br>
     <button onclick="window.print()" style="padding:10px 20px; font-size:16px; background:#1f77b4; color:white; border:none; border-radius:6px; cursor:pointer;">
@@ -175,7 +197,8 @@ st.markdown("""
 Notes:
 - Chart shows only total for 2025 without monthly breakdown.
 - ROI forecast reflects adjustable investment + fee vs. energy cost savings.
-- Use the blue print button to download full proposal as PDF from browser.
+- PDF download includes summary metrics.
+- Blue print button lets you download full dashboard manually.
 """)
 
 st.caption("Crafted by Univers AI • Powered by Streamlit • Engineered for client impact.")
