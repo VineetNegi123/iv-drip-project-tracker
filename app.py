@@ -37,7 +37,26 @@ def save_data(tasks, milestones, stages):
 
 # --- App Setup ---
 st.set_page_config(page_title="IV Drip Project Tracker", layout="wide")
-st.title("💧 IV Drip Project Tracker")
+st.markdown("""
+<style>
+body {
+    background-color: #ffffff;
+}
+section.main > div {
+    padding: 20px;
+}
+.block-container {
+    padding-top: 1rem;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div style='text-align:center; padding: 20px; border-bottom: 2px solid #ccc;'>
+    <h1 style='color:#003366;'>💧 IV Drip Startup Dashboard</h1>
+    <p style='font-size:18px;'>Track your innovation from design to deployment</p>
+</div>
+""", unsafe_allow_html=True)
 
 st.sidebar.header("🚀 Project Navigation")
 page = st.sidebar.radio("Select Section", [
@@ -53,7 +72,7 @@ tasks, milestones, stages = load_data()
 
 # --- Dashboard ---
 if page == "📊 Dashboard":
-    st.subheader("📈 Project Overview")
+    st.markdown("<h2 style='color:#003366;'>📈 Project Overview</h2>", unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Total Tasks", len(tasks))
@@ -64,14 +83,18 @@ if page == "📊 Dashboard":
     st.progress(progress)
     st.write(f"🔧 Progress: **{round(progress * 100, 1)}%**")
 
-    st.markdown("---")
-    st.markdown("### 📋 Stage Completion")
+    st.markdown("<h3 style='color:#003366;'>📋 Stage Completion</h3>", unsafe_allow_html=True)
     for _, row in stages.iterrows():
-        st.info(f"🧩 **{row['Stage']}** — {row['Status']} — {row['Notes']}")
+        st.markdown(f"""
+            <div style='padding:10px; margin:10px 0; border-left:5px solid #003366; background:#f9f9f9;'>
+                <b>🧩 {row['Stage']}</b> — {row['Status']}<br>
+                <span style='font-size:14px;'>{row['Notes']}</span>
+            </div>
+        """, unsafe_allow_html=True)
 
 # --- Task Board ---
 elif page == "🗂️ Task Board":
-    st.subheader("✅ Team Tasks")
+    st.markdown("<h2 style='color:#003366;'>✅ Team Tasks</h2>", unsafe_allow_html=True)
     status_filter = st.selectbox("Filter by Status", ["All"] + tasks['Status'].unique().tolist())
     view = tasks if status_filter == "All" else tasks[tasks['Status'] == status_filter]
 
@@ -80,7 +103,6 @@ elif page == "🗂️ Task Board":
             st.write(f"👤 Owner: {row['Owner']}")
             st.write(f"📅 Deadline: {row['Deadline']}")
 
-    st.markdown("---")
     st.markdown("### ➕ Add New Task")
     with st.form("new_task"):
         task = st.text_input("Task")
@@ -92,13 +114,13 @@ elif page == "🗂️ Task Board":
             new = pd.DataFrame([[task, owner, status, deadline]], columns=tasks.columns)
             tasks = pd.concat([tasks, new], ignore_index=True)
             save_data(tasks, milestones, stages)
-            st.success("Task added!")
+            st.success("✅ Task added successfully!")
 
 # --- Milestones ---
 elif page == "📅 Milestones":
-    st.subheader("🎯 Milestone Tracker")
+    st.markdown("<h2 style='color:#003366;'>🎯 Milestone Tracker</h2>", unsafe_allow_html=True)
     for _, row in milestones.iterrows():
-        st.success(f"📌 {row['Milestone']} — {row['Date']} — {row['Status']}")
+        st.markdown(f"<div style='padding:10px; background:#eef5ff; border-left: 5px solid #3366cc;'>📌 <b>{row['Milestone']}</b> — {row['Date']} — {row['Status']}</div>", unsafe_allow_html=True)
 
     st.markdown("### ➕ Add Milestone")
     with st.form("new_milestone"):
@@ -110,21 +132,21 @@ elif page == "📅 Milestones":
             new = pd.DataFrame([[m, d, s]], columns=milestones.columns)
             milestones = pd.concat([milestones, new], ignore_index=True)
             save_data(tasks, milestones, stages)
-            st.success("Milestone added!")
+            st.success("📌 Milestone added!")
 
 # --- Stages ---
 elif page == "🔧 Project Stages":
-    st.subheader("🛠️ Project Lifecycle Stages")
+    st.markdown("<h2 style='color:#003366;'>🛠️ Project Lifecycle Stages</h2>", unsafe_allow_html=True)
     for _, row in stages.iterrows():
         with st.expander(f"🧩 {row['Stage']} — {row['Status']}"):
             st.write(row['Notes'])
 
-    st.markdown("### ➕ Add/Update Stage")
+    st.markdown("### ➕ Add or Update Stage")
     with st.form("new_stage"):
         stage = st.text_input("Stage")
         status = st.selectbox("Status", ["Not Started", "In Progress", "Completed"])
         notes = st.text_area("Notes (e.g. CAD plan, SolidWorks, code plan, etc.)")
-        submit = st.form_submit_button("Add / Update")
+        submit = st.form_submit_button("Save")
         if submit:
             stages = stages[stages.Stage != stage]
             stages = pd.concat([stages, pd.DataFrame([[stage, status, notes]], columns=stages.columns)], ignore_index=True)
@@ -133,7 +155,7 @@ elif page == "🔧 Project Stages":
 
 # --- Media ---
 elif page == "📷 Product Media":
-    st.subheader("📸 Upload Product Images")
+    st.markdown("<h2 style='color:#003366;'>📸 Product Media</h2>", unsafe_allow_html=True)
     uploaded = st.file_uploader("Upload product photo or CAD render", type=["jpg", "jpeg", "png", "pdf"])
     if uploaded:
         file_path = os.path.join("data", uploaded.name)
@@ -142,12 +164,12 @@ elif page == "📷 Product Media":
         st.image(file_path, caption=uploaded.name)
         st.success("Media uploaded!")
 
-# --- General Upload ---
+# --- Upload Files ---
 elif page == "📎 Upload Files":
-    st.subheader("📎 Upload Design Docs / Plans / Budget")
-    uploaded = st.file_uploader("Upload file", type=["jpg", "jpeg", "png", "pdf", "docx", "xlsx"])
+    st.markdown("<h2 style='color:#003366;'>📎 General Upload Zone</h2>", unsafe_allow_html=True)
+    uploaded = st.file_uploader("Upload design docs, budget sheets, etc.", type=["jpg", "jpeg", "png", "pdf", "docx", "xlsx"])
     if uploaded:
         file_path = os.path.join("data", uploaded.name)
         with open(file_path, "wb") as f:
             f.write(uploaded.getbuffer())
-        st.success(f"Uploaded {uploaded.name}")
+        st.success(f"✅ Uploaded {uploaded.name}")
