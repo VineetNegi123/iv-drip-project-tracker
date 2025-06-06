@@ -159,6 +159,7 @@ Payback Period: {int(payback_months)} months
 class PDF(FPDF):
     def header(self):
         self.set_font("Arial", 'B', 14)
+        self.image("univers_logo.png", 10, 8, 33)  # Add logo image
         self.cell(0, 10, "Univers CO₂ Reduction Summary", ln=True, align='C')
         self.ln(10)
 
@@ -187,7 +188,7 @@ st.download_button(
 st.markdown("""
     <br>
     <button onclick="window.print()" style="padding:10px 20px; font-size:16px; background:#1f77b4; color:white; border:none; border-radius:6px; cursor:pointer;">
-        🗸️ Print / Save Full Page as PDF
+        ☑️ Print / Save Full Page as PDF
     </button>
     <p style='font-size:13px; margin-top:10px;'>Use this button to export the entire dashboard view including charts and inputs.</p>
 """, unsafe_allow_html=True)
@@ -201,4 +202,3 @@ Notes:
 """)
 
 st.caption("Crafted by Univers AI • Powered by Streamlit • Engineered for client impact.")
-
