@@ -5,17 +5,25 @@ import os
 
 # --- Load Data ---
 def load_data():
-    if not os.path.exists("data/tasks.csv"):
-        tasks = pd.DataFrame(columns=["Task", "Owner", "Status", "Deadline"])
-        tasks.to_csv("data/tasks.csv", index=False)
-    else:
-        tasks = pd.read_csv("data/tasks.csv")
+    # Create data folder if it doesn't exist
+    if not os.path.exists("data"):
+        os.makedirs("data")
 
-    if not os.path.exists("data/milestones.csv"):
-        milestones = pd.DataFrame(columns=["Milestone", "Date", "Status"])
-        milestones.to_csv("data/milestones.csv", index=False)
+    # Tasks
+    tasks_file = "data/tasks.csv"
+    if not os.path.exists(tasks_file):
+        tasks = pd.DataFrame(columns=["Task", "Owner", "Status", "Deadline"])
+        tasks.to_csv(tasks_file, index=False)
     else:
-        milestones = pd.read_csv("data/milestones.csv")
+        tasks = pd.read_csv(tasks_file)
+
+    # Milestones
+    milestones_file = "data/milestones.csv"
+    if not os.path.exists(milestones_file):
+        milestones = pd.DataFrame(columns=["Milestone", "Date", "Status"])
+        milestones.to_csv(milestones_file, index=False)
+    else:
+        milestones = pd.read_csv(milestones_file)
 
     return tasks, milestones
 
@@ -86,7 +94,7 @@ elif page == "Timeline":
 
 # --- Upload Zone ---
 elif page == "Upload Zone":
-    st.subheader("📎 Upload Files")
+    st.subheader("📌 Upload Files")
     uploaded_file = st.file_uploader("Upload design files, images or documents")
     if uploaded_file:
         file_path = os.path.join("data", uploaded_file.name)
