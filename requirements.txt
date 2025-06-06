@@ -1,5 +1,2 @@
 streamlit
 pandas
-[theme]
-base="light"
-primaryColor="#00bfff"
