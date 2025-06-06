@@ -141,7 +141,7 @@ with chart_col:
 
 # PDF Export Section
 st.markdown("---")
-st.subheader("🧒 Export Proposal Summary")
+st.subheader("🤖 Export Proposal Summary")
 
 report_content = f'''
 CO₂ Reduction Proposal Summary
@@ -159,7 +159,7 @@ Payback Period: {int(payback_months)} months
 class PDF(FPDF):
     def header(self):
         self.set_font("Arial", 'B', 14)
-        self.image("univers_logo.png", 10, 8, 33)  # Add logo image
+        self.image("univers_logo.png", 10, 8, 33)
         self.cell(0, 10, "Univers CO₂ Reduction Summary", ln=True, align='C')
         self.ln(10)
 
@@ -176,15 +176,15 @@ pdf = PDF()
 pdf.create_pdf(report_content)
 pdf_buffer = BytesIO()
 pdf.output(pdf_buffer)
+pdf_buffer.seek(0)
 
 st.download_button(
     label="🗓️ Download Summary Report (PDF)",
-    data=pdf_buffer.getvalue(),
+    data=pdf_buffer,
     file_name="CO2_Proposal_Summary.pdf",
     mime="application/pdf"
 )
 
-# Browser Print Option
 st.markdown("""
     <br>
     <button onclick="window.print()" style="padding:10px 20px; font-size:16px; background:#1f77b4; color:white; border:none; border-radius:6px; cursor:pointer;">
