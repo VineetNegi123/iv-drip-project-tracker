@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import base64
-from PIL import Image
 
 # Set page config
 st.set_page_config(page_title="CO₂ Reduction Calculator", layout="wide")
@@ -34,10 +33,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-
-# Load and display logo
-logo = "univers_logo.png"  # Ensure this logo file is in the same directory or replace with your path
-st.image(logo, width=150)
 
 st.title("📊 CO₂ Reduction & ROI Dashboard")
 
@@ -126,7 +121,8 @@ with metrics_col:
 
 with chart_col:
     st.subheader("📉 Annual Saving (2025)")
-    fig = go.Figure()
+    fig = go.
+Figure()
     fig.add_trace(go.Bar(x=["2025"], y=[energy_savings], name='Annual Energy Reduction (kWh)',
                          marker_color='#3B82F6', text=[f"{int(energy_savings / 1000)}k"], textposition="outside"))
     fig.update_layout(height=420, xaxis=dict(showgrid=False), yaxis=dict(showgrid=True),
@@ -146,19 +142,40 @@ with chart_col:
 st.markdown("---")
 st.subheader("🧾 Export Proposal Summary")
 
+report_content = f'''
+CO₂ Reduction Proposal Summary
+
+Energy Savings: {energy_savings:,.0f} kWh/year
+Carbon Reduction: {annual_co2_reduction / 1000:.1f} tCO₂e/year
+Electricity Rate: ${electricity_rate:.3f} /kWh
+Savings Percentage: {savings_percentage * 100:.1f}%
+Initial Investment: ${initial_investment:,.0f}
+Software Fee: ${software_fee:,.0f}/year
+Net Income (3yrs): ${three_year_net_income:,}k
+Payback Period: {int(payback_months)} months
+'''
+
+st.download_button(
+    label="📥 Download Summary Report (TXT)",
+    data=report_content,
+    file_name="CO2_Proposal_Summary.txt",
+    mime="text/plain"
+)
+
+# Print to PDF button (browser triggered)
 st.markdown("""
     <br>
     <button onclick="window.print()" style="padding:10px 20px; font-size:16px; background:#1f77b4; color:white; border:none; border-radius:6px; cursor:pointer;">
         🖨️ Print / Save Full Page as PDF
     </button>
-    <p style='font-size:13px; margin-top:10px;'>Click this to export all graphs, inputs, and results as a printable PDF report.</p>
+    <p style='font-size:13px; margin-top:10px;'>Use this button to export the entire dashboard view including charts and inputs.</p>
 """, unsafe_allow_html=True)
 
 st.markdown("""
-**Notes:**
+Notes:
 - Chart shows only total for 2025 without monthly breakdown.
 - ROI forecast reflects adjustable investment + fee vs. energy cost savings.
-- The button above uses your browser to export the full visible layout as PDF.
+- Use the blue print button to download full proposal as PDF from browser.
 """)
 
 st.caption("Crafted by Univers AI • Powered by Streamlit • Engineered for client impact.")
