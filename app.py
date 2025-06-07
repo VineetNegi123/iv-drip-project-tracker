@@ -6,7 +6,7 @@ from io import BytesIO
 from fpdf import FPDF
 
 # Set page config
-st.set_page_config(page_title="CO₂ & ROI Summary", layout="wide")
+st.set_page_config(page_title="CO₂ Reduction Calculator", layout="wide")
 
 # Custom CSS for clean layout
 st.markdown("""
@@ -74,7 +74,7 @@ with col2:
 
 with col3:
     electricity_rate = st.number_input("Electricity Rate (USD/kWh)", value=0.14)
-    savings_percentage = st.number_input("Potential Energy Savings (%)", value=8.8, format="%.2f") / 100
+    savings_percentage = st.number_input("Potential Energy Savings", value=8.8, format="%.2f") / 100
 
 # Derived Calculations
 total_energy_before = energy_savings / savings_percentage if savings_percentage > 0 else 0
@@ -84,8 +84,8 @@ electricity_cost_after = energy_after * electricity_rate
 annual_co2_reduction = energy_savings * carbon_emission_factor
 
 # ROI Calculations
-initial_investment = st.number_input("One Time Onboarding Investment (USD)", value=16000.0)
-software_fee = st.number_input("Annual Recurring Software Investment (USD)", value=72817.0)
+initial_investment = st.number_input("One Time Onboarding Investment", value=16000.0)
+software_fee = st.number_input("Annual Recurring Software Investment", value=72817.0)
 years = 5
 annual_savings = energy_savings * electricity_rate
 cumulative_savings = []
@@ -132,17 +132,25 @@ with chart_col:
 
     st.subheader("💰 5-Year ROI Forecast")
     fig2 = go.Figure()
-    fig2.add_trace(go.Bar(x=list(range(1, years+1)), y=[annual_savings]*years, name="Annual Savings", marker_color="#10B981"))
-    fig2.add_trace(go.Bar(x=list(range(1, years+1)), y=total_costs, name="Annual Costs", marker_color="#F87171"))
-    fig2.add_trace(go.Scatter(x=list(range(1, years+1)), y=cumulative_savings, mode='lines+markers', name="Cumulative Net Savings", line=dict(color="#3B82F6")))
+    fig2.add_trace(go.Bar(x=list(range(years)), y=[annual_savings]*years, name="Annual Savings", marker_color="#10B981"))
+    fig2.add_trace(go.Bar(x=list(range(years)), y=total_costs, name="Annual Costs", marker_color="#F87171"))
+    fig2.add_trace(go.Scatter(x=list(range(years)), y=cumulative_savings, mode='lines+markers', name="Cumulative Net Savings", line=dict(color="#3B82F6")))
     fig2.update_layout(barmode='group', height=400, xaxis_title='Year', yaxis_title='Cash Flow (USD)',
                        plot_bgcolor='white', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
     st.plotly_chart(fig2, use_container_width=True)
-    st.markdown(f"**Summary:** Total Net Income over 5 years is approximately ${cumulative_savings[-1]:,.0f}")
 
-# Notes
+    st.markdown(f"""
+    <p style='font-size:14px; color:#555;'>
+    📌 <b>Summary:</b><br>
+    Year 0: Initial onboarding + annual investment<br>
+    Year 1–5: Annual recurring software investment compared to expected savings<br>
+    Cumulative savings shown in blue line.
+    </p>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
+st.subheader("📝 Notes")
 st.markdown("""
-### 📌 Assumptions
 - Savings are indicative only and assume 12 months of clean interval energy + HVAC data; we will recalculate once verified data is available.
 - We assume your BMS offers read/write API access with documented point names and units; exact scope and timeline will be set after we review the point list.
 - Models use current schedules, set-points and occupancy; any major change (new tenants, longer hours, etc.) will shift both baseline and savings.
@@ -150,4 +158,5 @@ st.markdown("""
 - No new meters, controllers, network upgrades or cybersecurity work are included; any required additions will be separately scoped and priced after a joint site survey.
 """)
 
-st.caption("Crafted by Univers AI • Engineered for client impact • Powered by Streamlit")
+st.caption("Crafted by Univers AI • For Proposal Use Only • Powered by Streamlit")
+
