@@ -6,7 +6,7 @@ from io import BytesIO
 from fpdf import FPDF
 
 # Set page config
-st.set_page_config(page_title="CO₂ Reduction Calculator", layout="wide")
+st.set_page_config(page_title="CO₂ & ROI Summary", layout="wide")
 
 # Custom CSS for clean layout
 st.markdown("""
@@ -73,8 +73,8 @@ with col2:
         st.info(f"Using carbon factor for {selected_country}: {carbon_emission_factor} kg CO₂/kWh")
 
 with col3:
-    electricity_rate = st.number_input("Electricity Rate ($/kWh)", value=0.14)
-    savings_percentage = st.number_input("Savings Percentage", value=8.8, format="%.2f") / 100
+    electricity_rate = st.number_input("Electricity Rate (USD/kWh)", value=0.14)
+    savings_percentage = st.number_input("Potential Energy Savings (%)", value=8.8, format="%.2f") / 100
 
 # Derived Calculations
 total_energy_before = energy_savings / savings_percentage if savings_percentage > 0 else 0
@@ -84,9 +84,9 @@ electricity_cost_after = energy_after * electricity_rate
 annual_co2_reduction = energy_savings * carbon_emission_factor
 
 # ROI Calculations
-initial_investment = st.number_input("Initial Investment ($)", value=16000.0)
-software_fee = st.number_input("Annual Software Fee ($)", value=72817.0)
-years = 10
+initial_investment = st.number_input("One Time Onboarding Investment (USD)", value=16000.0)
+software_fee = st.number_input("Annual Recurring Software Investment (USD)", value=72817.0)
+years = 5
 annual_savings = energy_savings * electricity_rate
 cumulative_savings = []
 net_cash_flow = []
@@ -114,11 +114,11 @@ with metrics_col:
     <br>
     <div class=\"metric-box\">{energy_savings / 1000:,.0f}k<div class=\"metric-label\">kWh/year<br>Energy Reduction</div></div>
     <br>
-    <div class=\"metric-box\">{savings_percentage * 100:.1f}%<div class=\"metric-label\">Saving Percentage</div></div>
+    <div class=\"metric-box\">{savings_percentage * 100:.1f}%<div class=\"metric-label\">Potential Energy Savings</div></div>
     <br>
     <div class=\"metric-box\">{int(payback_months):02d}<div class=\"metric-label\">Months<br>Payback Period</div></div>
     <br>
-    <div class=\"metric-box\">{three_year_net_income}k<div class=\"metric-label\">US Dollars<br>Net Income (3yrs)</div></div>
+    <div class=\"metric-box\">{three_year_net_income}k<div class=\"metric-label\">USD<br>Net Income (3yrs)</div></div>
     """, unsafe_allow_html=True)
 
 with chart_col:
@@ -130,75 +130,24 @@ with chart_col:
                       margin=dict(l=20, r=20, t=30, b=30), showlegend=False, plot_bgcolor='white')
     st.plotly_chart(fig, use_container_width=True)
 
-    st.subheader("💰 10-Year ROI Forecast")
+    st.subheader("💰 5-Year ROI Forecast")
     fig2 = go.Figure()
-    fig2.add_trace(go.Bar(x=list(range(years)), y=[annual_savings]*years, name="Annual Savings", marker_color="#10B981"))
-    fig2.add_trace(go.Bar(x=list(range(years)), y=total_costs, name="Annual Costs", marker_color="#F87171"))
-    fig2.add_trace(go.Scatter(x=list(range(years)), y=cumulative_savings, mode='lines+markers', name="Cumulative Net Savings", line=dict(color="#3B82F6")))
-    fig2.update_layout(barmode='group', height=400, xaxis_title='Year', yaxis_title='Cash Flow ($)',
+    fig2.add_trace(go.Bar(x=list(range(1, years+1)), y=[annual_savings]*years, name="Annual Savings", marker_color="#10B981"))
+    fig2.add_trace(go.Bar(x=list(range(1, years+1)), y=total_costs, name="Annual Costs", marker_color="#F87171"))
+    fig2.add_trace(go.Scatter(x=list(range(1, years+1)), y=cumulative_savings, mode='lines+markers', name="Cumulative Net Savings", line=dict(color="#3B82F6")))
+    fig2.update_layout(barmode='group', height=400, xaxis_title='Year', yaxis_title='Cash Flow (USD)',
                        plot_bgcolor='white', legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
     st.plotly_chart(fig2, use_container_width=True)
+    st.markdown(f"**Summary:** Total Net Income over 5 years is approximately ${cumulative_savings[-1]:,.0f}")
 
-# PDF Export Section
-st.markdown("---")
-st.subheader("🤖 Export Proposal Summary")
-
-report_content = f'''
-CO₂ Reduction Proposal Summary
-
-Energy Savings: {energy_savings:,.0f} kWh/year
-Carbon Reduction: {annual_co2_reduction / 1000:.1f} tCO₂e/year
-Electricity Rate: ${electricity_rate:.3f} /kWh
-Savings Percentage: {savings_percentage * 100:.1f}%
-Initial Investment: ${initial_investment:,.0f}
-Software Fee: ${software_fee:,.0f}/year
-Net Income (3yrs): ${three_year_net_income:,}k
-Payback Period: {int(payback_months)} months
-'''
-
-class PDF(FPDF):
-    def header(self):
-        self.set_font("Arial", 'B', 14)
-        self.image("univers_logo.png", 10, 8, 33)
-        self.cell(0, 10, "Univers CO₂ Reduction Summary", ln=True, align='C')
-        self.ln(10)
-
-    def chapter_body(self, text):
-        self.set_font("Arial", '', 12)
-        self.multi_cell(0, 10, text)
-        self.ln()
-
-    def create_pdf(self, content):
-        self.add_page()
-        self.chapter_body(content)
-
-pdf = PDF()
-pdf.create_pdf(report_content)
-pdf_buffer = BytesIO()
-pdf.output(pdf_buffer)
-pdf_buffer.seek(0)
-
-st.download_button(
-    label="🗓️ Download Summary Report (PDF)",
-    data=pdf_buffer,
-    file_name="CO2_Proposal_Summary.pdf",
-    mime="application/pdf"
-)
-
+# Notes
 st.markdown("""
-    <br>
-    <button onclick="window.print()" style="padding:10px 20px; font-size:16px; background:#1f77b4; color:white; border:none; border-radius:6px; cursor:pointer;">
-        ☑️ Print / Save Full Page as PDF
-    </button>
-    <p style='font-size:13px; margin-top:10px;'>Use this button to export the entire dashboard view including charts and inputs.</p>
-""", unsafe_allow_html=True)
-
-st.markdown("""
-Notes:
-- Chart shows only total for 2025 without monthly breakdown.
-- ROI forecast reflects adjustable investment + fee vs. energy cost savings.
-- PDF download includes summary metrics.
-- Blue print button lets you download full dashboard manually.
+### 📌 Assumptions
+- Savings are indicative only and assume 12 months of clean interval energy + HVAC data; we will recalculate once verified data is available.
+- We assume your BMS offers read/write API access with documented point names and units; exact scope and timeline will be set after we review the point list.
+- Models use current schedules, set-points and occupancy; any major change (new tenants, longer hours, etc.) will shift both baseline and savings.
+- Cost and CO₂ figures use prevailing market values.
+- No new meters, controllers, network upgrades or cybersecurity work are included; any required additions will be separately scoped and priced after a joint site survey.
 """)
 
-st.caption("Crafted by Univers AI • Powered by Streamlit • Engineered for client impact.")
+st.caption("Crafted by Univers AI • Engineered for client impact • Powered by Streamlit")
